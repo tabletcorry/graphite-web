@@ -897,6 +897,7 @@ function createFunctionsMenu() {
         {text: 'Integral', handler: applyFuncToEach('integral')},
         {text: 'Percentile Values', handler: applyFuncToEachWithInput('percentileOfSeries', "Please enter the percentile to use")},
         {text: 'Non-negative Derivative', handler: applyFuncToEachWithInput('nonNegativeDerivative', "Please enter a maximum value if this metric is a wrapping counter (or just leave this blank)", {allowBlank: true})},
+        {test: 'Step Non-negative Derivative', handler: applyFuncToEach('stepNonNegativeDerivative')},
         {text: 'Log', handler: applyFuncToEachWithInput('log', 'Please enter a base')},
         {text: 'Absolute Value', handler: applyFuncToEach('absolute')},
         {text: 'timeShift', handler: applyFuncToEachWithInput('timeShift', 'Shift this metric ___ back in time (examples: 10min, 7d, 2w)', {quote: true})},

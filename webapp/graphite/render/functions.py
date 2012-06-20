@@ -687,6 +687,9 @@ def integral(requestContext, seriesList):
     results.append(newSeries)
   return results
 
+def stepNonNegativeDerivative(requestContext, seriesList):
+    results = scaleToSeconds(requestContext, seriesList, 1)
+    return nonNegativeDerivative(requestContext, results)
 
 def nonNegativeDerivative(requestContext, seriesList, maxValue=None):
   """
@@ -2426,6 +2429,7 @@ SeriesFunctions = {
   'integral' : integral,
   'percentileOfSeries': percentileOfSeries,
   'nonNegativeDerivative' : nonNegativeDerivative,
+  'stepNonNegativeDerivative' : stepNonNegativeDerivative,
   'log' : logarithm,
   'timeShift': timeShift,
   'summarize' : summarize,
