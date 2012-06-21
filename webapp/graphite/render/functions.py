@@ -1456,6 +1456,28 @@ def mostDeviant(requestContext, n, seriesList):
   deviants.sort(key=lambda i: i[0], reverse=True) #sort by sigma
   return [ series for (sigma,series) in deviants ][:n] #return the n most deviant series
 
+def instantStdev(requestContext, *seriesLists):
+  (seriesList,start,end,step) = normalize(seriesLists)
+  #name = "averageSeries(%s)" % ','.join((s.name for s in seriesList))
+  #name = "averageSeries(%s)" % ','.join(set([s.pathExpression for s in seriesList]))
+  name = "instantStdev"
+
+  values = []
+
+  for row in izip(*seriesList):
+    if None in row:
+      values.append(None)
+      continue
+    mean = safeSum(row)/safeLen(row)
+    mean_squared = safeMul(mean, mean)
+    squared_means = safeSum([safeMul(x, x) for x in row])/safeLen(row)
+
+    values.append(math.sqrt(squared_means - mean_squared))
+    
+  series = TimeSeries(name,start,end,step,values)
+  series.pathExpression = name
+  return [series]
+
 
 def stdev(requestContext, seriesList, points, windowTolerance=0.1):
   """
