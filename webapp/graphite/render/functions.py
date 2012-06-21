@@ -20,6 +20,7 @@ import re
 import random
 import time
 
+from operator import neg
 from graphite.logger import log
 from graphite.render.datalib import fetchData, TimeSeries, timestamp
 from graphite.render.attime import parseTimeOffset
@@ -1466,8 +1467,10 @@ def instantStdev(requestContext, *seriesLists):
 
   for row in izip(*seriesList):
     if None in row:
-      values.append(None)
-      continue
+      original_len = len(row)
+      row = tuple([x for x in row if x])
+      if len(row) == 0 or len(row)/float(original_len) < 0.5:
+        continue
     mean = safeSum(row)/safeLen(row)
     mean_squared = safeMul(mean, mean)
     squared_means = safeSum([safeMul(x, x) for x in row])/safeLen(row)
@@ -1477,6 +1480,23 @@ def instantStdev(requestContext, *seriesLists):
   series = TimeSeries(name,start,end,step,values)
   series.pathExpression = name
   return [series]
+
+def magic(requestContext, *seriesLists):
+  (seriesList,start,end,step) = normalize(seriesLists)
+  instant_stdev = instantStdev(requestContext, *seriesLists)[0]
+  average_series = averageSeries(requestContext, *seriesLists)[0]
+
+  positive_line = [safeSum(x) for x in izip(average_series, instant_stdev)]
+  negative_line = [safeSum(x) for x in izip(average_series, [neg(x) if x else None for x in instant_stdev])]
+
+  positive_series = TimeSeries(None, start, end, step, positive_line)
+  positive_series.color = "gray"
+  negative_series = TimeSeries(None, start, end, step, negative_line)
+  negative_series.color = "gray"
+
+  average_series.name = "Average With Stdev"
+
+  return [positive_series, negative_series, average_series]
 
 
 def stdev(requestContext, seriesList, points, windowTolerance=0.1):
@@ -2452,6 +2472,8 @@ SeriesFunctions = {
   'percentileOfSeries': percentileOfSeries,
   'nonNegativeDerivative' : nonNegativeDerivative,
   'stepNonNegativeDerivative' : stepNonNegativeDerivative,
+  'instantStdev': instantStdev,
+  'magic': magic,
   'log' : logarithm,
   'timeShift': timeShift,
   'summarize' : summarize,
