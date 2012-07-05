@@ -1457,10 +1457,30 @@ def mostDeviant(requestContext, n, seriesList):
   deviants.sort(key=lambda i: i[0], reverse=True) #sort by sigma
   return [ series for (sigma,series) in deviants ][:n] #return the n most deviant series
 
-def instantStdev(requestContext, *seriesLists):
+def instantStdev(requestContext, *seriesLists, **kwargs):
+  """
+  Takes a wildcard seriesList and produces the standard deviation of the 
+  datapoints for each time slice.
+
+  If the ratio of null points in the window is greater than windowTolerance,
+  skip the calculation. The default for windowTolerance is 0.1 (up to 10% of points
+  in the window can be missing). 
+
+  Example:
+
+  .. code-block:: none
+
+    &target=instantStdev(server*.instance*.threads.busy)
+    &target=instantStdev(server*.instance*.cpu.system,0.0)
+
+  """
+
+  if 'windowTolerance' in kwargs:
+    windowTolerance = kwargs['windowTolerance']
+  else:
+    windowTolerance = 0.1
+
   (seriesList,start,end,step) = normalize(seriesLists)
-  #name = "averageSeries(%s)" % ','.join((s.name for s in seriesList))
-  #name = "averageSeries(%s)" % ','.join(set([s.pathExpression for s in seriesList]))
   name = "instantStdev"
 
   values = []
@@ -1469,7 +1489,7 @@ def instantStdev(requestContext, *seriesLists):
     if None in row:
       original_len = len(row)
       row = tuple([x for x in row if x])
-      if len(row) == 0 or len(row)/float(original_len) < 0.5:
+      if len(row) == 0 or len(row)/float(original_len) < windowTolerance:
         continue
     mean = safeSum(row)/safeLen(row)
     mean_squared = safeMul(mean, mean)
@@ -1482,6 +1502,22 @@ def instantStdev(requestContext, *seriesLists):
   return [series]
 
 def magic(requestContext, *seriesLists):
+  """
+  Takes a wildcard seriesList and produces the standard deviation of the 
+  datapoints for each time slice.
+
+  If the ratio of null points in the window is greater than windowTolerance,
+  skip the calculation. The default for windowTolerance is 0.1 (up to 10% of points
+  in the window can be missing). 
+
+  Example:
+
+  .. code-block:: none
+
+    &target=instantStdev(server*.instance*.threads.busy)
+    &target=instantStdev(server*.instance*.cpu.system,0.0)
+
+  """
   (seriesList,start,end,step) = normalize(seriesLists)
   instant_stdev = instantStdev(requestContext, *seriesLists)[0]
   average_series = averageSeries(requestContext, *seriesLists)[0]
