@@ -149,25 +149,29 @@ class CarbonLinkPool:
     return results
 
   def send_request(self, request):
-    metric = request['metric']
     serialized_request = pickle.dumps(request, protocol=-1)
     len_prefix = struct.pack("!L", len(serialized_request))
     request_packet = len_prefix + serialized_request
 
-    host = self.select_host(metric)
-    conn = self.get_connection(host)
-    try:
-      conn.sendall(request_packet)
-      result = self.recv_response(conn)
-    except:
-      self.last_failure[host] = time.time()
-      raise
-    else:
-      self.connections[host].add(conn)
-      if 'error' in result:
-        raise CarbonLinkRequestError(result['error'])
+    for host in self.hosts:
+      conn = self.get_connection(host)
+      try:
+        conn.sendall(request_packet)
+        result = self.recv_response(conn)
+      except:
+        self.last_failure[host] = time.time()
+        raise
       else:
-        return result
+        self.connections[host].add(conn)
+        if 'error' in result:
+          continue
+        else:
+          if len(result['datapoints']) != 0:
+            return result
+          else:
+            continue
+    return {'datapoints': []}
+
 
   def recv_response(self, conn):
     len_prefix = recv_exactly(conn, 4)
