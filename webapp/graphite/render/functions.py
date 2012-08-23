@@ -1490,6 +1490,7 @@ def instantStdev(requestContext, *seriesLists, **kwargs):
       original_len = len(row)
       row = tuple([x for x in row if x])
       if len(row) == 0 or len(row)/float(original_len) < windowTolerance:
+        values.append(None)
         continue
     mean = safeSum(row)/safeLen(row)
     mean_squared = safeMul(mean, mean)
