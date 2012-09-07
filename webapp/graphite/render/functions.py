@@ -20,7 +20,7 @@ import re
 import random
 import time
 
-from operator import neg
+from operator import neg, truth, mul, truediv
 from graphite.logger import log
 from graphite.render.datalib import fetchData, TimeSeries, timestamp
 from graphite.render.attime import parseTimeOffset
@@ -1480,6 +1480,11 @@ def instantStdev(requestContext, *seriesLists, **kwargs):
   else:
     windowTolerance = 0.1
 
+  if 'factor' in kwargs:
+    factor = kwargs['factor']
+  else:
+    factor = 1
+
   (seriesList,start,end,step) = normalize(seriesLists)
   name = "instantStdev"
 
@@ -1488,15 +1493,17 @@ def instantStdev(requestContext, *seriesLists, **kwargs):
   for row in izip(*seriesList):
     if None in row:
       original_len = len(row)
-      row = tuple([x for x in row if x])
+      row = tuple(filter(truth, row))
+      #row = tuple([x for x in row if x])
       if len(row) == 0 or len(row)/float(original_len) < windowTolerance:
         values.append(None)
         continue
-    mean = safeSum(row)/safeLen(row)
-    mean_squared = safeMul(mean, mean)
-    squared_means = safeSum([safeMul(x, x) for x in row])/safeLen(row)
+    row_len = len(row)
+    mean = sum(row)/row_len
+    mean_squared = mean*mean
+    squared_means = sum([x * x for x in row])/row_len
 
-    values.append(math.sqrt(squared_means - mean_squared))
+    values.append(math.sqrt(squared_means - mean_squared) * factor)
     
   series = TimeSeries(name,start,end,step,values)
   series.pathExpression = name
@@ -1520,11 +1527,11 @@ def magic(requestContext, *seriesLists):
 
   """
   (seriesList,start,end,step) = normalize(seriesLists)
-  instant_stdev = instantStdev(requestContext, *seriesLists)[0]
+  instant_stdev = instantStdev(requestContext, *seriesLists, factor=3)[0]
   average_series = averageSeries(requestContext, *seriesLists)[0]
 
   positive_line = [safeSum(x) for x in izip(average_series, instant_stdev)]
-  negative_line = [safeSum(x) for x in izip(average_series, [neg(x) if x else None for x in instant_stdev])]
+  negative_line = [safeDiff(x) for x in izip(average_series, instant_stdev)]
 
   positive_series = TimeSeries(None, start, end, step, positive_line)
   positive_series.color = "gray"
